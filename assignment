@@ -1,0 +1,127 @@
+import time
+from sr.robot import *
+
+
+# Threshold for the control of the orientation
+ORIENTATION_THRESHOLD = 2.0
+
+
+# Threshold for the control of the linear distance
+DISTANCE_THRESHOLD = 0.4
+
+
+fbox = 1
+first_box_placed = True  # Set this to True if the first box is placed
+
+
+R = Robot()  # Instance of the class Robot
+
+
+def drive(speed, seconds):
+	"""
+	Function for setting a linear velocity
+
+
+	Args:
+	speed (int): the speed of the wheels
+	seconds (int): the time interval
+	"""
+	R.motors[0].m0.power = speed
+	R.motors[0].m1.power = speed
+	time.sleep(seconds)
+	R.motors[0].m0.power = 0
+	R.motors[0].m1.power = 0
+
+
+def turn(speed, seconds):
+	"""
+	Function for setting an angular velocity
+
+
+	Args:
+	speed (int): the speed of the wheels
+	seconds (int): the time interval
+	"""
+	R.motors[0].m0.power = speed
+	R.motors[0].m1.power = -speed
+	time.sleep(seconds)
+	R.motors[0].m0.power = 0
+	R.motors[0].m1.power = 0
+
+
+def find_token_gold():
+	dist = 100
+	for token in R.see():
+    	if token.dist < dist and token.info.marker_type == MARKER_TOKEN_GOLD:
+        	dist = token.dist
+        	rot_y = token.rot_y
+	if dist == 100:
+    	return -1, -1
+	else:
+    	return dist, rot_y
+
+
+while fbox:
+	dist, rot_y = find_token_gold()
+	if dist == -1:
+    	print("I don't see any token!!")
+    	fbox = 0  # if no markers are detected, the program ends
+	elif dist < DISTANCE_THRESHOLD:
+    	print("Found it!")
+    	R.grab()  # if we are close to the token, we grab it.
+    	print("Gotcha!")
+    	fbox = 0
+	elif -ORIENTATION_THRESHOLD <= rot_y <= ORIENTATION_THRESHOLD:
+    	print("Ah, here we are!.")
+    	drive(20, 0.8)
+	elif rot_y < -ORIENTATION_THRESHOLD:
+    	print("Left a bit...")
+    	turn(-2, 0.5)
+	elif rot_y > ORIENTATION_THRESHOLD:
+    	print("Right a bit...")
+    	turn(2, 0.5)
+
+
+turn(-8, 1.5)
+drive(30, 6)
+dist, rot_y = find_token_gold()
+R.release()
+print("Token Released!")
+drive(-20, 1.5)
+turn(-10, 4)
+drive(20, 2)
+
+
+for box in range(5):
+	first_box_placed = True
+	while first_box_placed:  # This loop will execute for each subsequent box
+    	dist, rot_y = find_token_gold()
+
+
+    	if dist == -1:
+       	 
+        	turn(10, 1)
+    	elif dist < DISTANCE_THRESHOLD:
+        	print("Found it!")
+        	R.grab()  # If we are close to the token, we grab it.
+        	print("Gotcha!")
+        	turn(20, 2.5)  # Adjust robot position for the next box placement
+        	drive(22, 6)  # Move to the reference position
+        	dist, rot_y = find_token_gold()
+        	R.release()  # Release the box
+        	drive(-20, 1.5)  # Move away from the reference position
+        	turn(-10, 4)
+        	drive(20, 2)
+        	first_box_placed = False  # Box placed, exit the loop
+    	elif -ORIENTATION_THRESHOLD <= rot_y <= ORIENTATION_THRESHOLD:
+        	print("Ah, here we are!.")
+        	drive(25, 0.8)
+    	elif rot_y < -ORIENTATION_THRESHOLD:
+        	print("Left a bit...")
+        	turn(-2, 0.5)
+    	elif rot_y > ORIENTATION_THRESHOLD:
+        	print("Right a bit...")
+        	turn(2, 0.5)
+
+
+
